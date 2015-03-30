@@ -1,0 +1,198 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+        <meta http-equiv="Access-Control-Allow-Origin" content="*">
+        <title>svg to html prototype</title>
+        <script src="d3.v3.min.js">
+        </script>
+        <script src="jquery-2.0.0.min.js">
+        </script>
+        <script>
+            
+            /*
+             
+             svg to html prototype V1.2
+             Author David Kinross
+             
+             Includes D3 and jQuery
+             http://d3js.org
+             https://jquery.com
+             
+             Copyright 2015 David Kinross
+             http://www.davidkinross.com/
+             
+             Released under the MIT license
+             
+             Instructions:
+             Put your designs in the 'design.svg' file.
+             1st level groups are your pages, template defaults to show top group (example file is 'home')
+             2nd level groups point to which 1st level group you want to show when a user presses a 2nd level group.
+             Only use letters a to z in group names, prototype will brake if you add in numbers.
+             Doesn't support images or  clipping paths, other than that it should be all good.
+             Unhide everything before saving svg, not doing this will brake prototype.
+             Drag "open_me.html" into an open Firefox window to open the prototype.
+             
+             */
+            (function(){
+            
+                var canvas, pages = [];
+                
+                /*******************************************
+                 *
+                 *			4. DEFINE SVG click events
+                 *
+                 *******************************************/
+                function showLayer(id){
+                				
+                    var got_a_valid_page , leanID , testID ;
+					
+					got_a_valid_page = false;
+                    
+                    leanID = id.replace(/[^a-zA-Z ]/g, '');
+                    leanID = leanID.toLowerCase();
+                                        
+                    for (i = 0; i < pages.length; i++) {
+                    
+                        testID = pages[i];
+                        testID = testID.replace(/[^a-zA-Z ]/g, '');
+                        testID = testID.toLowerCase();
+                        
+                        if (testID == leanID) {
+                            got_a_valid_page = pages[i];
+                        }
+                    }
+                    
+                    if (got_a_valid_page) {
+                        for (i = 0; i < pages.length; i++) {
+                            canvas.selectAll("#" + pages[i]).style("visibility", "hidden");
+                        }
+                        canvas.selectAll("#" + got_a_valid_page).style("visibility", "visible");
+                    }
+                }
+                
+                /*******************************************
+                 *
+                 *			3. ADD SVG click events
+                 *
+                 *******************************************/
+                function clickEvents(){
+                    var id, i;
+                    for (i = 0; i < pages.length; i++) {
+                        canvas.selectAll("#" + pages[i] + " > g").on("click", function(){
+                            id = this;
+                            if (id.attributes[0]) {
+                                if (id.attributes[0].name == "id") {
+                                    showLayer(id.attributes[0].value);
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                /*******************************************
+                 *
+                 *			2. LOAD SVG artwork
+                 *
+                 *******************************************/
+                function setUpCanvas(data){
+					
+					$("#prototype").empty();
+					
+					
+                    var svgNode, i, _group, child0, child1, child2, source, a, responsiveCanvas = {
+                        "width": "100%",
+                        "height": "100%"
+                    };
+                    
+                    canvas = d3.select("#prototype").append("svg");
+                    canvas.attr("fill-opacity", 1);
+                    canvas.attr("id", ("prototype-d3"));
+                    svgNode = $("svg", data);
+                    _group = canvas.append("g");
+                    
+                    $("#prototype").width(svgNode.attr('width').replace(/[^0-9\.]/g, ''));
+                    $("#prototype").height(svgNode.attr('height').replace(/[^0-9\.]/g, ''));
+                    
+                    canvas.attr(responsiveCanvas);
+					
+					
+                    svgNode.each(function(){
+                        $(this).find('svg > g').each(function(){
+                            source = $(this)[0];
+                            child0 = _group.append((source.nodeName));
+                            for (i = 0; i < source.attributes.length; i++) {
+                                a = source.attributes[i];
+                                child0.attr(a.name, a.value);
+                                pages.push(a.value);
+                            }
+                            $(this).children('g').each(function(){
+                                source = $(this)[0];
+                                child1 = child0.append((source.nodeName));
+                                for (i = 0; i < source.attributes.length; i++) {
+                                    a = source.attributes[i];
+                                    child1.attr(a.name, a.value);
+                                }
+                                $(this).find('*').each(function(){
+                                    source = $(this)[0];
+                                        child2 = child1.append((source.nodeName));
+                                        for (i = 0; i < source.attributes.length; i++) {
+                                            a = source.attributes[i];
+                                            child2.attr(a.name, a.value);
+                                            if (source.nodeName == "text") {
+                                                child2.text($(this).text());
+                                            }
+                                        }
+                                });
+                            });
+                        });
+                    });
+                    
+                    clickEvents();
+                    showLayer(pages[pages.length - 1]);
+                    
+                }
+                
+                /*******************************************
+                 *
+                 *			1. LOAD SVG feed
+                 *
+                 *******************************************/
+                function loadSVGs(){
+                    var noCache = new Date().getTime();
+                    $.get("design.svg?=" + noCache, null, function(data){
+                        setUpCanvas(data);
+                    }, 'xml');
+                }
+                
+                /*******************************************
+                 *
+                 *			0. START big function
+                 *
+                 *******************************************/
+                loadSVGs();
+                
+            })();
+        </script>
+        <style>
+            body, div, #prototype , p {
+                padding: 0;
+                margin: 0;
+            }
+			
+			p {
+				text-align:center;
+				padding-top:4em;
+			}
+            
+            #prototype , p {
+                margin: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="prototype">
+        	<p>Loading prototype, this may take a while!</p>
+        </div>
+    </body>
+</html>
